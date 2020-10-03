@@ -174,6 +174,9 @@ def main():
     print(model, file=args.logfile)
     print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
     print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])), file=args.logfile)
+    print(args)
+    print(args, file=args.logfile)
+
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
