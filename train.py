@@ -19,6 +19,7 @@ import resnet as RN
 import pyramidnet as PYRM
 import utils
 import numpy as np
+import kornia as K
 
 import warnings
 
@@ -61,6 +62,8 @@ parser.add_argument('--beta', default=0, type=float,
                     help='hyperparameter beta')
 parser.add_argument('--cutmix_prob', default=0, type=float,
                     help='cutmix probability')
+parser.add_argument('--hybrid', action='store_true')
+
 
 parser.set_defaults(bottleneck=True)
 parser.set_defaults(verbose=True)
@@ -225,7 +228,18 @@ def train(train_loader, model, criterion, optimizer, epoch):
         target = target.cuda()
 
         r = np.random.rand(1)
-        if args.beta > 0 and r < args.cutmix_prob:
+        if args.hybrid:
+            sigma = args.beta
+            rand_index = torch.randperm(input.size()[0]).cuda()
+            target_a = target
+            target_b = target[rand_index]
+            g_kernel = K.filters.GaussianBlur2d((7, 7), (sigma, sigma))
+            x_a, x_b = input, input[rand_index]
+            input = g_kernel(x_a) + (x_b - g_kernel(x_b))
+            lam = 0.2  # TODO: compute lam based on sigma
+            output = model(input)
+            loss = criterion(output, target_a) * lam + criterion(output, target_b) * (1. - lam)
+        elif args.beta > 0 and r < args.cutmix_prob:
             # generate mixed sample
             lam = np.random.beta(args.beta, args.beta)
             rand_index = torch.randperm(input.size()[0]).cuda()
