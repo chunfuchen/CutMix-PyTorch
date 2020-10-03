@@ -94,26 +94,26 @@ def main():
 
         if args.dataset == 'cifar100':
             train_loader = torch.utils.data.DataLoader(
-                datasets.CIFAR100('../data', train=True, download=True, transform=transform_train),
+                datasets.CIFAR100('/home/chenrich/datasets/image_cls/cifar100', train=True, download=True, transform=transform_train),
                 batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True)
             val_loader = torch.utils.data.DataLoader(
-                datasets.CIFAR100('../data', train=False, transform=transform_test),
+                datasets.CIFAR100('/home/chenrich/datasets/image_cls/cifar100', train=False, transform=transform_test),
                 batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True)
             numberofclass = 100
         elif args.dataset == 'cifar10':
             train_loader = torch.utils.data.DataLoader(
-                datasets.CIFAR10('../data', train=True, download=True, transform=transform_train),
+                datasets.CIFAR10('/home/chenrich/datasets/image_cls/cifar10', train=True, download=True, transform=transform_train),
                 batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True)
             val_loader = torch.utils.data.DataLoader(
-                datasets.CIFAR10('../data', train=False, transform=transform_test),
+                datasets.CIFAR10('/home/chenrich/datasets/image_cls/cifar10', train=False, transform=transform_test),
                 batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True)
             numberofclass = 10
         else:
             raise Exception('unknown dataset: {}'.format(args.dataset))
 
     elif args.dataset == 'imagenet':
-        traindir = os.path.join('/home/data/ILSVRC/train')
-        valdir = os.path.join('/home/data/ILSVRC/val')
+        traindir = os.path.join('/home/chenrich/datasets/image_cls/imagenet1k/train')
+        valdir = os.path.join('/home/chenrich/datasets/image_cls/imagenet1k/val')
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
 
@@ -156,10 +156,13 @@ def main():
     else:
         raise Exception('unknown dataset: {}'.format(args.dataset))
 
+    directory = "runs/%s/" % (args.expname)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     args.logfile = open(f'runs/{args.expname}/log.log', 'w')
 
     print("=> creating model '{}'".format(args.net_type))
-    print("=> creating model '{}'".format(args.net_type), file=args.logfile)
+    print("=> creating model '{}'".format(args.net_type), file=args.logfile, flush=True)
     if args.net_type == 'resnet':
         model = RN.ResNet(args.dataset, args.depth, numberofclass, args.bottleneck)  # for ResNet
     elif args.net_type == 'pyramidnet':
@@ -171,12 +174,11 @@ def main():
     model = torch.nn.DataParallel(model).cuda()
 
     print(model)
-    print(model, file=args.logfile)
+    print(model, file=args.logfile, flush=True)
     print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
-    print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])), file=args.logfile)
+    print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])), file=args.logfile, flush=True)
     print(args)
-    print(args, file=args.logfile)
-
+    print(args, file=args.logfile, flush=True)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -204,7 +206,7 @@ def main():
             best_err5 = err5
 
         print('Current best accuracy (top-1 and 5 error):', best_err1, best_err5)
-        print('Current best accuracy (top-1 and 5 error):', best_err1, best_err5, file=args.logfile)
+        print('Current best accuracy (top-1 and 5 error):', best_err1, best_err5, file=args.logfile, flush=True)
         save_checkpoint({
             'epoch': epoch,
             'arch': args.net_type,
@@ -215,7 +217,7 @@ def main():
         }, is_best)
 
     print('Best accuracy (top-1 and 5 error):', best_err1, best_err5)
-    print('Best accuracy (top-1 and 5 error):', best_err1, best_err5, file=args.logfile)
+    print('Best accuracy (top-1 and 5 error):', best_err1, best_err5, file=args.logfile, flush=True)
     args.logfile.close()
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -246,7 +248,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             g_kernel = K.filters.GaussianBlur2d((7, 7), (sigma, sigma))
             x_a, x_b = input, input[rand_index]
             input = g_kernel(x_a) + (x_b - g_kernel(x_b))
-            lam = 0.2  # TODO: compute lam based on sigma
+            lam = 0.8  # TODO: compute lam based on sigma
             output = model(input)
             loss = criterion(output, target_a) * lam + criterion(output, target_b) * (1. - lam)
         elif args.beta > 0 and r < args.cutmix_prob:
@@ -297,7 +299,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Train Loss {loss.avg:.3f}'.format(
         epoch, args.epochs, top1=top1, top5=top5, loss=losses))
     print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Train Loss {loss.avg:.3f}'.format(
-        epoch, args.epochs, top1=top1, top5=top5, loss=losses), file=args.logfile)
+        epoch, args.epochs, top1=top1, top5=top5, loss=losses), file=args.logfile, flush=True)
 
     return losses.avg
 
@@ -361,7 +363,7 @@ def validate(val_loader, model, criterion, epoch):
     print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Test Loss {loss.avg:.3f}'.format(
         epoch, args.epochs, top1=top1, top5=top5, loss=losses))
     print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Test Loss {loss.avg:.3f}'.format(
-        epoch, args.epochs, top1=top1, top5=top5, loss=losses), file=args.logfile)
+        epoch, args.epochs, top1=top1, top5=top5, loss=losses), file=args.logfile, flush=True)
     return top1.avg, top5.avg, losses.avg
 
 
