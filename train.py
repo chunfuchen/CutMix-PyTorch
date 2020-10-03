@@ -156,7 +156,10 @@ def main():
     else:
         raise Exception('unknown dataset: {}'.format(args.dataset))
 
+    args.logfile = open(f'runs/{args.expname}/log.log', 'w')
+
     print("=> creating model '{}'".format(args.net_type))
+    print("=> creating model '{}'".format(args.net_type), file=args.logfile)
     if args.net_type == 'resnet':
         model = RN.ResNet(args.dataset, args.depth, numberofclass, args.bottleneck)  # for ResNet
     elif args.net_type == 'pyramidnet':
@@ -168,7 +171,9 @@ def main():
     model = torch.nn.DataParallel(model).cuda()
 
     print(model)
+    print(model, file=args.logfile)
     print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
+    print('the number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])), file=args.logfile)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -196,6 +201,7 @@ def main():
             best_err5 = err5
 
         print('Current best accuracy (top-1 and 5 error):', best_err1, best_err5)
+        print('Current best accuracy (top-1 and 5 error):', best_err1, best_err5, file=args.logfile)
         save_checkpoint({
             'epoch': epoch,
             'arch': args.net_type,
@@ -206,7 +212,8 @@ def main():
         }, is_best)
 
     print('Best accuracy (top-1 and 5 error):', best_err1, best_err5)
-
+    print('Best accuracy (top-1 and 5 error):', best_err1, best_err5, file=args.logfile)
+    args.logfile.close()
 
 def train(train_loader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
@@ -286,6 +293,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
     print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Train Loss {loss.avg:.3f}'.format(
         epoch, args.epochs, top1=top1, top5=top5, loss=losses))
+    print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Train Loss {loss.avg:.3f}'.format(
+        epoch, args.epochs, top1=top1, top5=top5, loss=losses), file=args.logfile)
 
     return losses.avg
 
@@ -348,6 +357,8 @@ def validate(val_loader, model, criterion, epoch):
 
     print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Test Loss {loss.avg:.3f}'.format(
         epoch, args.epochs, top1=top1, top5=top5, loss=losses))
+    print('* Epoch: [{0}/{1}]\t Top 1-err {top1.avg:.3f}  Top 5-err {top5.avg:.3f}\t Test Loss {loss.avg:.3f}'.format(
+        epoch, args.epochs, top1=top1, top5=top5, loss=losses), file=args.logfile)
     return top1.avg, top5.avg, losses.avg
 
 
